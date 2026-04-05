@@ -1,43 +1,44 @@
-# Big Data Assignment 2
+# Big Data Assignment 2 — Simple search engine (MapReduce + ScyllaDB + Spark)
 
-Simple search engine with Hadoop MapReduce, ScyllaDB, and Spark, based on the course template: [firas-jolha/big-data-assignment2](https://github.com/firas-jolha/big-data-assignment2).
+Based on the course template: [firas-jolha/big-data-assignment2](https://github.com/firas-jolha/big-data-assignment2).
 
 ## Prerequisites
 
-- Docker
-- Docker Compose
+- Docker and Docker Compose
 
-## Data
+### Windows hosts
 
-Put the parquet shard in:
+Shell scripts **should use LF line endings** (not CRLF). On Windows, Cursor/VS Code: open `app/*.sh` → status bar **CRLF** → **LF** → save.
 
-`app/a.parquet`
-
-The scripts expect that exact path and filename.
+**Automatic fix:** `docker-compose` mounts **`entrypoint-master.sh`** (repo root). It runs first and runs `sed` on every `/app/*.sh` to remove carriage returns, then starts `app.sh`. Keep **`entrypoint-master.sh`** as **LF** if you edit it (same as other shell files). `.gitattributes` requests LF for `*.sh` and this file when using Git.
 
 ## Run
 
-From the repository root (the folder with `docker-compose.yml`):
+From this directory (the folder that contains **`docker-compose.yml`**, not only `app/`):
 
 ```bash
 docker compose up
 ```
 
-This starts the Hadoop master/worker containers and ScyllaDB, then runs `app/app.sh` on the master. That script:
+**If it looks like “nothing happens”:**
 
-1. starts HDFS and YARN
-2. creates the Python environment
-3. runs data preparation
-4. builds the index
-5. loads ScyllaDB
-6. runs sample searches
+1. First run can sit on **“Pulling …”** for a long time (large images). Wait, or run `docker compose pull` once.
+2. Use **`docker compose up`** without **`-d`** so logs stream in the terminal. With **`-d`**, run **`docker compose logs -f cluster-master`** to follow the master.
+3. Check containers: **`docker compose ps`**. If **`cluster-master`** is **Exited**, see **`docker compose logs cluster-master`**.
+4. Ensure **Docker Desktop** is running (Windows).
 
-## Configuration
+**If you see `$'\r': command not found`:** scripts still had CRLF; the entrypoint now fixes them with **Python** (more reliable than `sed` on Windows mounts).
 
-- Database host defaults to `scylla-server`
-- You can override hosts with `SCYLLA_HOSTS` or `CASSANDRA_HOSTS`
-- If needed, override the datacenter name with `SCYLLA_LOCAL_DC`
+**If HDFS shows `Configured Capacity: 0`:** the worker container must stay running (**`stdin_open` + `tty`** on `cluster-slave-1`), and **`start-services.sh`** overwrites Hadoop’s **`workers`** file so only **`cluster-slave-1`** is used (the image default lists non-existent slaves 2–5).
 
-## Report
+This starts the Hadoop master/slave stack and **ScyllaDB**, mounts `./app`, and runs **`entrypoint-master.sh`** then **`app/app.sh`** on the master (HDFS/YARN, Python venv, data prep, index, sample searches).
 
-Compile `report/main.tex` to produce `report.pdf` for submission.
+**Configuration:** the DB host defaults to `scylla-server` (see `docker-compose.yml`). Override with `SCYLLA_HOSTS` or `CASSANDRA_HOSTS` if needed; set `SCYLLA_LOCAL_DC` if your cluster uses a datacenter name other than `datacenter1`.
+
+## Data
+
+Place a Wikipedia parquet shard (e.g. `a.parquet` from the Kaggle dataset linked in the brief) in `app/` before building. The compose entrypoint expects `app/a.parquet` (see `prepare_data.sh`). By default, 100 non-empty articles are sampled for indexing (override with `N_DOCS` if you need more).
+
+## Reports
+
+Submit `report.pdf` separately per course instructions; this repository holds the runnable code and scripts only.
