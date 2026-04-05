@@ -1,0 +1,51 @@
+services:
+  cluster-master:
+    image: firasj/spark-docker-cluster
+    container_name: cluster-master
+    ports:
+      - "8088:8088"
+      - "4040:4040"
+      - "19888:19888"
+      - "9000:9000"
+      - "9870:9870"
+    volumes:
+      - "./app:/app"
+      - "./entrypoint-master.sh:/entrypoint-master.sh:ro"
+    networks:
+      - spark-cluster
+    depends_on:
+      - cluster-slave-1
+      - scylla-server
+    hostname: cluster-master
+    # tty: true hides logs on some Windows / non-interactive "docker compose up" runs
+    working_dir: /app
+    entrypoint:
+      - bash
+      - /entrypoint-master.sh
+
+  cluster-slave-1:
+    image: firasj/spark-docker-cluster
+    container_name: cluster-slave-1
+    networks:
+      - spark-cluster
+    hostname: cluster-slave-1
+    # Without TTY the worker container often exits → no DataNode → HDFS capacity 0.
+    stdin_open: true
+    tty: true
+
+  # ScyllaDB
+  scylla-server:
+    image: scylladb/scylla:5.4
+    container_name: scylla-server
+    hostname: scylla-server
+    command: --smp 1 --memory 750M --overprovisioned 1 --developer-mode 1
+    ports:
+      - "9042:9042"
+    networks:
+      - spark-cluster
+    ulimits:
+      nofile: 1048576
+
+networks:
+  spark-cluster:
+    driver: bridge

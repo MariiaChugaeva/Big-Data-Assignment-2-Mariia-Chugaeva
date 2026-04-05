@@ -1,0 +1,4 @@
+# CQL driver; works with ScyllaDB and Cassandra (same wire protocol).
+cassandra-driver>=3.29.0
+pathvalidate>=3.2.0
+venv-pack>=0.2.0

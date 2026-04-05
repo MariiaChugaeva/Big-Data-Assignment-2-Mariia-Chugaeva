@@ -1,0 +1,3 @@
+# Bash in Linux containers breaks on CRLF (e.g. "set: pipefail" or "set: eu").
+*.sh text eol=lf
+entrypoint-master.sh text eol=lf
